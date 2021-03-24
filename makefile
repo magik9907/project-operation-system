@@ -1,8 +1,8 @@
-readfile: main.o readFile.o
-	gcc main.o readFile.o -o readfile
-main.o: main.c readFile.h
+function: main.o function.o
+	gcc main.o function.o -o function
+main.o: main.c function.h
 	gcc -c main.c
-readFile: readFile.c readFile.h
-	gcc -c readFile.c
+function.o: function.c function.h
+	gcc -c function.c
 clean:
-	rm -f *.o readfile
+	rm -f *.o function
