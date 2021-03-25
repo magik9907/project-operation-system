@@ -9,5 +9,7 @@ typedef enum Bool
 void init (int argc,char* args[]);
 const bool isDir(char *path);
 void exitFailure(const char *mess);
+void syncDir();
+
 
 #endif

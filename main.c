@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     }
 
     init(argc, argv);
-
+    syncDir();
     return 0;
 }
 
@@ -24,6 +24,8 @@ int main(int argc, char *argv[])
 
 //[PARTIALY DONE:TODO=>ERRORS] Jeżeli któraś ze ścieżek nie jest katalogiem program powraca natychmiast z komunikatem błędu.
 //     W przeciwnym wypadku staje się demonem.
+
+//Synchronizacja folderów (nie rekursyjna)
 
 // Demon wykonuje następujące czynności:
 //     śpi przez piec minut (czas spania można zmieniać przy pomocy dodatkowego opcjonalnego argumentu) (parametr -t),
