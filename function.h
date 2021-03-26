@@ -10,6 +10,6 @@ void init (int argc,char* args[]);
 const bool isDir(char *path);
 void exitFailure(const char *mess);
 void syncDir();
-
+void copyFileFromDir(int sourceFile, int destinationFile);
 
 #endif

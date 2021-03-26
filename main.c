@@ -6,7 +6,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 5)
     {
-        write(1, "Not given arguments\n",20);
+        exitFailure("Not given arguments\n");
     }
 
     init(argc, argv);

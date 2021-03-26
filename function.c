@@ -20,6 +20,8 @@ void init(int argc, char *args[])
 {
     int argument;
     int index;
+    char *cwd;
+    size_t buffor = 250;
 
     while ((argument = getopt(argc, args, "s:d:t:m:R")) != -1)
     {
@@ -65,9 +67,22 @@ void init(int argc, char *args[])
     {
         exitFailure("Destionation path is not folder\n");
     }
-}
+    //set working directory
+    if (sourcePath[0] == '.')
+    {
+        cwd = (char *)malloc(sizeof(char) * buffor);
+        cwd = getcwd(cwd, buffor);
+        sourcePath = strcat(cwd, &sourcePath[1]);
+    }
 
-//85f5f1aacbf7a57766211a49488c8ab2b80ede68
+    if (destinationPath[0] == '.')
+    {
+        cwd = (char *)malloc(sizeof(char) * buffor);
+        cwd = getcwd(cwd, buffor);
+        destinationPath = strcat(cwd, &destinationPath[1]);
+    }
+    chdir("/");
+}
 
 const bool isDir(char *path)
 {
@@ -98,73 +113,76 @@ void exitFailure(const char *mess)
 //./function -s ./test -d ./test_copy
 void syncDir()
 {
+
     DIR *source;
     struct dirent *ep;
+    size_t buffor = 250;
+    char *destinationFilePath;
+    int sourceFile, destinationFile;
 
     source = opendir(sourcePath);
     if (source == NULL)
         exitFailure("Couldn't open the directory");
 
+    destinationFilePath = (char *)malloc(sizeof(char) * buffor);
+
     while (ep = readdir(source))
     {
-        char *sourceFilePath = (char *)malloc(sizeof(char));
-        char *destinationFilePath = (char *)malloc(sizeof(char));
-
-        strcat(strcat(strcat(sourceFilePath, sourcePath), "/"), ep->d_name);
-        //write(1, ep->d_name, strlen(ep->d_name));
-        // printf("%d\n", isFile(sourcePath, ep->d_name));
-        if (isFile(sourceFilePath) == 0)
+        if (strcmp(".", ep->d_name) == 0 || strcmp("..", ep->d_name) == 0)
             continue;
 
-        int sourceFile = open(sourceFilePath, O_RDONLY);
-        if (sourceFile == -1)
+        if (isFile(ep->d_name))
         {
-            free(sourceFilePath);
-            close(sourceFile);
-            exitFailure("source file open error");
-        }
+            sourceFile = open(ep->d_name, O_RDONLY);
+            if (sourceFile == -1)
+            {
+                close(sourceFile);
+                exitFailure("source file open error");
+            }
 
-        strcat(strcat(strcat(destinationFilePath, destinationPath), "/"), ep->d_name);
-        int destinationFile = open(destinationFilePath, O_CREAT | O_WRONLY, S_IRWXU | S_IRWXG | S_IRWXO);
-        if (destinationFile == -1)
-        {
+            // write(1, destinationPath, 1);
+            strcpy(destinationFilePath, destinationPath);
+            strcat(destinationFilePath, "/");
+            strcat(destinationFilePath, ep->d_name);
+            destinationFile = open(destinationPath, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
+            if (destinationFile == -1)
+            {
+                free(destinationFilePath);
+                close(sourceFile);
+                close(destinationFile);
+                exitFailure("destination file open error");
+            }
+            copyFileFromDir(sourceFile, destinationFile);
+
             close(sourceFile);
-            free(destinationFilePath);
             close(destinationFile);
-            free(sourceFilePath);
-            exitFailure("destination file open error");
         }
-
-        unsigned char buffer[1024];
-        ssize_t bytes_read, bytes_write;
-
-        do
-        {
-            buffer[0] = '\0';
-            bytes_read = read(sourceFile, buffer, sizeof(buffer));
-            if (bytes_read == -1)
-            {
-                close(sourceFile);
-                free(sourceFilePath);
-                close(destinationFile);
-                free(destinationFilePath);
-                exitFailure("read from source file error");
-            }
-            bytes_write = write(destinationFile, buffer, bytes_read);
-            if (bytes_write == -1)
-            {
-                close(sourceFile);
-                free(sourceFilePath);
-                close(destinationFile);
-                free(destinationFilePath);
-                exitFailure("write to destination file error");
-            }
-        } while (bytes_read == sizeof(buffer));
-
-        close(sourceFile);
-        free(sourceFilePath);
-        close(destinationFile);
-        free(destinationFilePath);
     }
+    free(destinationFilePath);
     (void)closedir(source);
+}
+
+void copyFileFromDir(int sourceFile, int destinationFile)
+{
+    unsigned char buffor[1024];
+    ssize_t bytes_read, bytes_write;
+
+    do
+    {
+        buffor[0] = '\0';
+        bytes_read = read(sourceFile, buffor, sizeof(buffor));
+        if (bytes_read == -1)
+        {
+            close(sourceFile);
+            close(destinationFile);
+            exitFailure("read from source file error");
+        }
+        bytes_write = write(destinationFile, buffor, bytes_read);
+        if (bytes_write == -1)
+        {
+            close(sourceFile);
+            close(destinationFile);
+            exitFailure("write to destination file error");
+        }
+    } while (bytes_read == sizeof(buffor));
 }
