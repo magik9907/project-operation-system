@@ -15,14 +15,12 @@ char *destinationPath = NULL;
 int sleepTime = 10;             //time in second
 int borderFileSize = 10;        // in bytes
 bool recursivePathFlag = false; //recursive synchronise files
+size_t buffor = 256;
 
 void init(int argc, char *args[])
 {
     int argument;
-    int index;
     char *cwd;
-    size_t buffor = 250;
-
     while ((argument = getopt(argc, args, "s:d:t:m:R")) != -1)
     {
         switch (argument)
@@ -47,7 +45,6 @@ void init(int argc, char *args[])
             break;
         }
     }
-
     //Source and destination path check if exists
     if (sourcePath == NULL || strcmp("", sourcePath) == 0)
     {
@@ -113,76 +110,111 @@ void exitFailure(const char *mess)
 //./function -s ./test -d ./test_copy
 void syncDir()
 {
-
+    int fds[2];
+    int err = 0;
+    pid_t pid;
     DIR *source;
+    DIR *test;
     struct dirent *ep;
-    size_t buffor = 250;
     char *destinationFilePath;
+    char *sourceFilePath;
     int sourceFile, destinationFile;
 
     source = opendir(sourcePath);
     if (source == NULL)
         exitFailure("Couldn't open the directory");
 
+    sourceFilePath = (char *)malloc(sizeof(char) * buffor);
     destinationFilePath = (char *)malloc(sizeof(char) * buffor);
 
     while (ep = readdir(source))
     {
         if (strcmp(".", ep->d_name) == 0 || strcmp("..", ep->d_name) == 0)
             continue;
+        strcpy(sourceFilePath, sourcePath);
+        strcat(sourceFilePath, "/");
+        strcat(sourceFilePath, ep->d_name);
 
-        if (isFile(ep->d_name))
+        if (isFile(sourceFilePath))
         {
-            sourceFile = open(ep->d_name, O_RDONLY);
-            if (sourceFile == -1)
-            {
-                close(sourceFile);
-                exitFailure("source file open error");
-            }
-
-            // write(1, destinationPath, 1);
             strcpy(destinationFilePath, destinationPath);
             strcat(destinationFilePath, "/");
-            strcat(destinationFilePath, ep->d_name);
-            destinationFile = open(destinationPath, O_CREAT | O_WRONLY | O_TRUNC, S_IRWXU);
-            if (destinationFile == -1)
-            {
-                free(destinationFilePath);
-                close(sourceFile);
-                close(destinationFile);
-                exitFailure("destination file open error");
-            }
-            copyFileFromDir(sourceFile, destinationFile);
 
-            close(sourceFile);
-            close(destinationFile);
+            if (pipe(fds) == -1)
+            {
+                exitFailure(strerror(errno));
+            }
+
+            pid = fork();
+            if (pid < 0)
+            {
+                exitFailure(strerror(errno));
+            }
+
+            if (pid == (pid_t)0)
+            {
+                test = opendir(destinationFilePath);
+                if (errno == ENOENT)
+                {
+                    mkdir(destinationFilePath, S_IRUSR | S_IWUSR | S_IXUSR);
+                }
+                strcat(destinationFilePath, ep->d_name);
+                writeToFile(fds, destinationFilePath);
+            }
+            else
+            {
+                readFromFile(fds, sourceFilePath);
+            }
+        }
+        else if (isDir(sourceFilePath) && recursivePathFlag == 1)
+        {
         }
     }
-    free(destinationFilePath);
-    (void)closedir(source);
 }
 
-void copyFileFromDir(int sourceFile, int destinationFile)
+void writeToFile(int fds[2], char *file)
 {
-    unsigned char buffor[1024];
-    ssize_t bytes_read, bytes_write;
-
-    do
+    int err;
+    err = close(fds[1]);
+    if (err == -1)
     {
-        buffor[0] = '\0';
-        bytes_read = read(sourceFile, buffor, sizeof(buffor));
-        if (bytes_read == -1)
-        {
-            close(sourceFile);
-            close(destinationFile);
-            exitFailure("read from source file error");
-        }
-        bytes_write = write(destinationFile, buffor, bytes_read);
-        if (bytes_write == -1)
-        {
-            close(sourceFile);
-            close(destinationFile);
-            exitFailure("write to destination file error");
-        }
-    } while (bytes_read == sizeof(buffor));
+        exitFailure(strerror(errno));
+    }
+
+    int fd = open(file, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    int readBuffer;
+    char *text = (char *)malloc(sizeof(char) * buffor);
+    while ((readBuffer = read(fds[0], text, buffor)) > 0)
+    {
+        write(fd, text, buffor);
+    }
+    if (fd == -1)
+    {
+        exitFailure(strerror(errno));
+    }
+    close(fd);
+    close(fds[0]);
+}
+
+void readFromFile(int fds[2], char *file)
+{
+    int err;
+    err = close(fds[0]);
+    if (err == -1)
+    {
+        exitFailure(strerror(errno));
+    }
+    int od = open(file, O_RDWR);
+    int readbuffer;
+    char *text = (char *)malloc(sizeof(char) * buffor);
+    while ((readbuffer = read(od, text, buffor)) > 0)
+    {
+        write(fds[1], text, buffor);
+    }
+    close(fds[1]);
+   
+}
+
+void recursiveSyncDir(char *folderPath)
+{
 }

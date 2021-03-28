@@ -6,10 +6,13 @@ typedef enum Bool
     true = 1
 } bool; //bool type
 
-void init (int argc,char* args[]);
+void init(int argc, char *args[]);
 const bool isDir(char *path);
 void exitFailure(const char *mess);
 void syncDir();
 void copyFileFromDir(int sourceFile, int destinationFile);
+void recursiveSyncDir(char *folderPath);
+void readFromFile(int fds[2], char *file);
+void writeToFile(int fds[2], char *file);
 
 #endif

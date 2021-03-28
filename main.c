@@ -15,8 +15,8 @@ int main(int argc, char *argv[])
 }
 
 //example command after compile:
-//      ./function -s ./ -d ./test/test.txt -t 3 -r 3
-
+//      ./function -s ./test -d ./test_copy -t 3 -r 3
+//moze na pipe zrobic
 
 // Demon synchronizujący dwa podkatalogi
 
