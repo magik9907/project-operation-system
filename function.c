@@ -107,17 +107,25 @@ void exitFailure(const char *mess)
     exit(EXIT_FAILURE);
 }
 
-//./function -s ./test -d ./test_copy
 void syncDir()
 {
-    int fds[2];
+    char *p = "/";
+    syncDirPath(p);
+}
+
+//./function -s ./test -d ./test_copy
+void syncDirPath(char *subDir)
+{
     int err = 0;
     DIR *source;
     struct dirent *ep;
     char *destinationFilePath;
     char *sourceFilePath;
-
-    source = opendir(sourcePath);
+    char *copyPath = (char *)malloc(sizeof(char) * buffor);
+    char *copySubDir = (char *)malloc(sizeof(char) * buffor);
+    strcpy(copyPath, sourcePath);
+    strcat(copyPath, subDir);
+    source = opendir(copyPath);
     if (source == NULL)
         exitFailure("Couldn't open the directory");
 
@@ -128,20 +136,28 @@ void syncDir()
     {
         if (strcmp(".", ep->d_name) == 0 || strcmp("..", ep->d_name) == 0)
             continue;
-        strcpy(sourceFilePath, sourcePath);
+        strcpy(sourceFilePath, copyPath);
         strcat(sourceFilePath, "/");
         strcat(sourceFilePath, ep->d_name);
 
         if (isFile(sourceFilePath))
         {
             strcpy(destinationFilePath, destinationPath);
-            strcat(destinationFilePath, "/");
+            strcat(destinationFilePath, subDir);
             syncFile(sourceFilePath, destinationFilePath, ep->d_name);
         }
-        else if (isDir(sourceFilePath) && recursivePathFlag == 1)
+        else if (isDir(sourceFilePath) == 1 && recursivePathFlag == 1)
         {
+            strcpy(copySubDir, subDir);
+            strcat(copySubDir, ep->d_name);
+            strcat(copySubDir, "/");
+            syncDirPath(copySubDir);
         }
     }
+    free(copySubDir);
+    free(sourceFilePath);
+    free(destinationFilePath);
+    free(copyPath);
     closedir(source);
 }
 
