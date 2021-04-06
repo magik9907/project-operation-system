@@ -109,7 +109,7 @@ void exitFailure(const char *mess)
 
 void syncDir()
 {
-    char *p = "/";
+    char *p = "";
     syncDirPath(p);
 }
 
@@ -163,6 +163,29 @@ void syncDirPath(char *subDir)
 
 void syncFile(char *src, char *dest, char *file)
 {
+    DIR *test = opendir(dest);
+    if (errno == ENOENT)
+    {
+        mkdir(dest, S_IRUSR | S_IWUSR | S_IXUSR);
+    }
+    closedir(test);
+    strcat(dest, "/");
+    strcat(dest, file);
+    struct stat bufSrc, bufDest;
+    if (stat(src, &bufSrc) == -1)
+        if (errno != ENOENT)
+            exitFailure("attributes src");
+    if (stat(dest, &bufDest) == -1)
+        if (errno != ENOENT)
+            exitFailure("attributes destination");
+    time_t *timeSrc = &bufSrc.st_mtime;
+    time_t *timeDest = &bufDest.st_mtime;
+
+    //printf("%ld %ld %s \n", *timeSrc, *timeDest, file);
+    if ((*timeDest) > (*timeSrc))
+    {
+        return;
+    }
     int fds[2];
     int err = 0;
     pid_t pid;
@@ -179,13 +202,6 @@ void syncFile(char *src, char *dest, char *file)
 
     if (pid == (pid_t)0)
     {
-        DIR *test = opendir(dest);
-        if (errno == ENOENT)
-        {
-            mkdir(dest, S_IRUSR | S_IWUSR | S_IXUSR);
-        }
-        closedir(test);
-        strcat(dest, file);
         writeToFile(fds, dest);
         return;
     }
@@ -204,7 +220,7 @@ void writeToFile(int fds[2], char *file)
         exitFailure(strerror(errno));
     }
 
-    int fd = open(file, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    int fd = open(file, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     if (fd == -1)
     {
         exitFailure(strerror(errno));
