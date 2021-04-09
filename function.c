@@ -8,8 +8,8 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include "function.h"
-
 char *sourcePath = NULL;
 char *destinationPath = NULL;
 int sleepTime = 10;             //time in second
@@ -93,7 +93,6 @@ const bool isDir(char *path)
 //check if file is regular file
 const bool isFile(char *path)
 {
-    //    printf("\n%s\n", path);
     struct stat st;
     stat(path, &st);
     if (S_ISREG(st.st_mode))
@@ -157,10 +156,10 @@ void checkExist(char *subDir)
                     strcat(copySubDir, "/");
                     checkExist(copySubDir);
                     if (rmdir(destinationFilePath) != 0)
-                        exitFailure(strerror(errno));
+                        exitFailure("rmDIR");
                 }
                 else if (remove(destinationFilePath) != 0)
-                    exitFailure(strerror(errno));
+                    exitFailure("removeFile");
             }
             else if (isDir(sourceFilePath) == 1)
             {
@@ -179,7 +178,6 @@ void checkExist(char *subDir)
     free(copyPath);
 }
 
-//./function -s ./test -d ./test_copy
 void syncDirPath(char *subDir)
 {
     int err = 0;
@@ -218,10 +216,10 @@ void syncDirPath(char *subDir)
             strcat(destinationFilePath, subDir);
             strcat(destinationFilePath, ep->d_name);
             DIR *test = opendir(destinationFilePath);
-            if (errno == ENOENT)
+            if (test == NULL)
             {
                 if (mkdir(destinationFilePath, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
-                    exitFailure("strerror(errno)");
+                    exitFailure(strerror(errno));
             }
             closedir(test);
             strcpy(copySubDir, subDir);
@@ -237,6 +235,27 @@ void syncDirPath(char *subDir)
     closedir(source);
 }
 
+void syncLargeFile(size_t length, char *src, char *dest)
+{
+    int fdr = open(src, O_RDONLY);
+    char *addr = mmap(NULL, length, PROT_READ, MAP_PRIVATE, fdr, 0);
+    if (addr == MAP_FAILED)
+        exitFailure("MMAP read problem");
+    int fdw = open(dest, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    int wSize = write(fdw, addr, length);
+    if (wSize != length)
+    {
+        if (wSize == -1)
+            exitFailure("write mmap problem");
+
+        write(1, "partial write", 13);
+        exit(EXIT_FAILURE);
+    }
+    munmap(addr, length);
+    close(fdr);
+    close(fdw);
+}
+
 void syncFile(char *src, char *dest, char *file)
 {
     strcat(dest, "/");
@@ -250,10 +269,14 @@ void syncFile(char *src, char *dest, char *file)
             exitFailure("attributes destination");
     time_t *timeSrc = &bufSrc.st_mtime;
     time_t *timeDest = &bufDest.st_mtime;
-
-    //printf("%ld %ld %s \n", *timeSrc, *timeDest, file);
     if ((*timeDest) > (*timeSrc))
     {
+        return;
+    }
+    size_t length = bufSrc.st_size;
+    if (length >= borderFileSize)
+    {
+        syncLargeFile(length, src, dest);
         return;
     }
     int fds[2];

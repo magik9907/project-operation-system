@@ -16,5 +16,6 @@ void recursiveSyncDir(char *folderPath);
 void readFromFile(int fds[2], char *file);
 void writeToFile(int fds[2], char *file);
 void syncFile(char *src, char *dest, char *file);
+void syncLargeFile(size_t length, char *src, char *dest);
 void checkExist(char *subDir);
 #endif

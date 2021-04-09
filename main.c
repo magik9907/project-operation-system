@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 
 //[DONE]Opcja -R pozwalająca na rekurencyjną synchronizację katalogów (teraz pozycje będące katalogami nie są ignorowane). W szczególności jeżeli demon stwierdzi w katalogu docelowym podkatalog którego brak w katalogu źródłowym powinien usunąć go wraz z zawartością. (8p)
 
-//[TODO] W zależności od rozmiaru plików {
+//[DONE] W zależności od rozmiaru plików {
 //     dla małych plików wykonywane jest kopiowanie przy pomocy read/write a
 //     w przypadku dużych używany jest bardziej efektywny mechanizm,
 //         np.: przy pomocy mmap/write (plik źródłowy zostaje zamapowany w całości w pamięci)
