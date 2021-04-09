@@ -109,8 +109,74 @@ void exitFailure(const char *mess)
 
 void syncDir()
 {
-    char *p = "";
+    char *p = "/";
+    checkExist(p);
     syncDirPath(p);
+}
+
+bool pathExist(char *p)
+{
+    struct stat info;
+    if (stat(p, &info) != 0)
+    {
+        if (errno == ENOENT || errno == EACCES)
+            return false;
+    }
+    return true;
+}
+
+void checkExist(char *subDir)
+{
+    int err = 0, i;
+    char *destinationFilePath = (char *)malloc(sizeof(char) * buffor);
+    char *sourceFilePath = (char *)malloc(sizeof(char) * buffor);
+    char *copyPath = (char *)malloc(sizeof(char) * buffor);
+    char *copySubDir = (char *)malloc(sizeof(char) * buffor);
+    strcpy(copyPath, destinationPath);
+    strcat(copyPath, subDir);
+    struct dirent **fileList;
+    int noFiles = scandir(copyPath, &fileList, NULL, alphasort);
+
+    for (i = 0; i < noFiles; i++)
+    {
+        if (strcmp(".", fileList[i]->d_name) != 0 && strcmp("..", fileList[i]->d_name) != 0)
+        {
+            strcpy(sourceFilePath, sourcePath);
+            strcat(sourceFilePath, subDir);
+            strcat(sourceFilePath, fileList[i]->d_name);
+
+            strcpy(destinationFilePath, copyPath);
+            strcat(destinationFilePath, "/");
+            strcat(destinationFilePath, fileList[i]->d_name);
+            if (pathExist(sourceFilePath) == 0)
+            {
+                if (isDir(destinationFilePath) == 1)
+                {
+                    strcpy(copySubDir, subDir);
+                    strcat(copySubDir, fileList[i]->d_name);
+                    strcat(copySubDir, "/");
+                    checkExist(copySubDir);
+                    if (rmdir(destinationFilePath) != 0)
+                        exitFailure(strerror(errno));
+                }
+                else if (remove(destinationFilePath) != 0)
+                    exitFailure(strerror(errno));
+            }
+            else if (isDir(sourceFilePath) == 1)
+            {
+                strcpy(copySubDir, subDir);
+                strcat(copySubDir, fileList[i]->d_name);
+                strcat(copySubDir, "/");
+                checkExist(copySubDir);
+            }
+        }
+        free(fileList[i]);
+    }
+    free(fileList);
+    free(copySubDir);
+    free(sourceFilePath);
+    free(destinationFilePath);
+    free(copyPath);
 }
 
 //./function -s ./test -d ./test_copy
@@ -148,6 +214,16 @@ void syncDirPath(char *subDir)
         }
         else if (isDir(sourceFilePath) == 1 && recursivePathFlag == 1)
         {
+            strcpy(destinationFilePath, destinationPath);
+            strcat(destinationFilePath, subDir);
+            strcat(destinationFilePath, ep->d_name);
+            DIR *test = opendir(destinationFilePath);
+            if (errno == ENOENT)
+            {
+                if (mkdir(destinationFilePath, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
+                    exitFailure("strerror(errno)");
+            }
+            closedir(test);
             strcpy(copySubDir, subDir);
             strcat(copySubDir, ep->d_name);
             strcat(copySubDir, "/");
@@ -163,12 +239,6 @@ void syncDirPath(char *subDir)
 
 void syncFile(char *src, char *dest, char *file)
 {
-    DIR *test = opendir(dest);
-    if (errno == ENOENT)
-    {
-        mkdir(dest, S_IRUSR | S_IWUSR | S_IXUSR);
-    }
-    closedir(test);
     strcat(dest, "/");
     strcat(dest, file);
     struct stat bufSrc, bufDest;
