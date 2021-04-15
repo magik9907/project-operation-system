@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     }
 
     init(argc, argv);
-    syncDir();
+    start();
     return 0;
 }
 // TODO: ERRORS catch
