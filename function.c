@@ -1,4 +1,7 @@
 #include <stdio.h>
+#include <signal.h>
+#include <time.h>
+#include <syslog.h>
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
@@ -16,6 +19,12 @@ int sleepTime = 10;             //time in second
 int borderFileSize = 10;        // in bytes
 bool recursivePathFlag = false; //recursive synchronise files
 size_t buffor = 256;
+const char *daemonName = "DirSync";
+
+void handler(int signum)
+{
+    syncDir();
+}
 
 void init(int argc, char *args[])
 {
@@ -81,6 +90,13 @@ void init(int argc, char *args[])
     chdir("/");
 }
 
+void logger(const char *message)
+{
+    time_t now;
+    time(&now);
+    syslog(LOG_INFO, "%s: %s", ctime(&now), message);
+}
+
 void start()
 {
 
@@ -101,14 +117,15 @@ void start()
     }
     /* Change the file mode mask */
     umask(0);
-
-    /* Open any logs here */
-
+    // Open logs here
+    setlogmask(LOG_UPTO (LOG_INFO));
+    openlog(daemonName, LOG_NDELAY, LOG_USER);
     /* Create a new SID for the child process */
     sid = setsid();
     if (sid < 0)
     {
         /* Log the failure */
+	logger("Creation of the daemon %s has failed\n");
         exit(EXIT_FAILURE);
     }
 
@@ -116,6 +133,7 @@ void start()
     if ((chdir("/")) < 0)
     {
         /* Log the failure */
+	logger("Could not change the directory to /");
         exit(EXIT_FAILURE);
     }
 
@@ -125,13 +143,14 @@ void start()
     close(STDERR_FILENO);
 
     /* Daemon-specific initialization goes here */
-
+    signal(SIGUSR1, handler);
     /* The Big Loop */
     while (1)
     {
         /* Do some task here ... */
-        syncDir();
-            sleep(sleepTime); 
+	logger("Daemon has woken up\n");
+	syncDir();
+            sleep(sleepTime);
     }
     exit(EXIT_SUCCESS);
 }
@@ -179,9 +198,19 @@ bool pathExist(char *p)
     return true;
 }
 
+void logWithFileName(const char *mess, const char *file)
+{
+    char *fullMess = (char *)malloc(sizeof(char) * (strlen(mess) + strlen(file) + 2));
+    strcpy(fullMess, mess);
+    strcat(fullMess, file);
+    logger(fullMess);
+    free(fullMess);
+}
+
 void checkExist(char *subDir)
 {
     int err = 0, i;
+    char *logMess;
     char *destinationFilePath = (char *)malloc(sizeof(char) * buffor);
     char *sourceFilePath = (char *)malloc(sizeof(char) * buffor);
     char *copyPath = (char *)malloc(sizeof(char) * buffor);
@@ -210,11 +239,16 @@ void checkExist(char *subDir)
                     strcat(copySubDir, fileList[i]->d_name);
                     strcat(copySubDir, "/");
                     checkExist(copySubDir);
+		    logWithFileName("Removing directory ", destinationFilePath);
                     if (rmdir(destinationFilePath) != 0)
                         exitFailure("rmDIR");
                 }
-                else if (remove(destinationFilePath) != 0)
-                    exitFailure("removeFile");
+                else 
+		{
+		    logWithFileName("Removing file ", destinationFilePath);
+		    if (remove(destinationFilePath) != 0)
+			exitFailure("removeFile");
+		}
             }
             else if (isDir(sourceFilePath) == 1)
             {
@@ -273,6 +307,7 @@ void syncDirPath(char *subDir)
             DIR *test = opendir(destinationFilePath);
             if (test == NULL)
             {
+		logWithFileName("Creating directory ", destinationFilePath);
                 if (mkdir(destinationFilePath, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
                     exitFailure(strerror(errno));
             }
@@ -292,6 +327,7 @@ void syncDirPath(char *subDir)
 
 void syncLargeFile(size_t length, char *src, char *dest)
 {
+    logWithFileName("Creating or opening a large file called ", dest);
     int fdr = open(src, O_RDONLY);
     char *addr = mmap(NULL, length, PROT_READ, MAP_PRIVATE, fdr, 0);
     if (addr == MAP_FAILED)
@@ -361,6 +397,7 @@ void syncFile(char *src, char *dest, char *file)
 
 void writeToFile(int fds[2], char *file)
 {
+    logWithFileName("Creating or changing ", file);
     int err;
     err = close(fds[1]);
     if (err == -1)
