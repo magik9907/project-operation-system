@@ -449,8 +449,10 @@ void syncLargeFile(size_t length, char *src, char *dest)
     int fdr = open(src, O_RDONLY);
     char *addr = mmap(NULL, length, PROT_READ, MAP_PRIVATE, fdr, 0);
     if (addr == MAP_FAILED)
+    {
         logger(strerror(errno));
-    return;
+        return;
+    }
     int fdw = open(dest, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     int wSize = write(fdw, addr, length);
     if (wSize != length)
