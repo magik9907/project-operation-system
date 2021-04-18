@@ -15,7 +15,7 @@
 #include "function.h"
 char *sourcePath = NULL;
 char *destinationPath = NULL;
-int sleepTime = 10;             //time in second
+int sleepTime = 5 * 60;         //time in second
 int borderFileSize = 10;        // in bytes
 bool recursivePathFlag = false; //recursive synchronise files
 size_t buffor = 256;
@@ -26,8 +26,19 @@ void handler(int signum)
     syncDir();
 }
 
+void logger(const char *message)
+{
+    time_t now;
+    time(&now);
+    syslog(LOG_INFO, "%s=> %s: %s", "SyncFile", ctime(&now), message);
+}
+
 void init(int argc, char *args[])
 {
+    // Open logs here
+    setlogmask(LOG_UPTO(LOG_INFO));
+    openlog(daemonName, LOG_NDELAY, LOG_USER);
+    logger("Initialize program\n");
     int argument;
     char *cwd;
     while ((argument = getopt(argc, args, "s:d:t:m:R")) != -1)
@@ -57,20 +68,24 @@ void init(int argc, char *args[])
     //Source and destination path check if exists
     if (sourcePath == NULL || strcmp("", sourcePath) == 0)
     {
+        logger("Initialize failed: source path\n");
         exitFailure("Source path not found\n");
     }
     if (destinationPath == NULL || strcmp("", destinationPath) == 0)
     {
+        logger("Initialize failed: destination path\n");
         exitFailure("Destination path not found\n");
     }
 
     //checking if paths are folders
     if (!isDir(sourcePath))
     {
+        logger("Initialize failed: source aren't folder\n");
         exitFailure("Source path is not folder\n");
     }
     if (!isDir(destinationPath))
     {
+        logger("Initialize failed: destination aren't folder\n");
         exitFailure("Destionation path is not folder\n");
     }
     //set working directory
@@ -90,16 +105,16 @@ void init(int argc, char *args[])
     chdir("/");
 }
 
-void logger(const char *message)
-{
-    time_t now;
-    time(&now);
-    syslog(LOG_INFO, "%s: %s", ctime(&now), message);
+void signal_kill(){
+    logger("Deamon stop, kill PID");
+    closelog();
+    exit(EXIT_SUCCESS);
 }
 
 void start()
 {
 
+    signal(SIGTERM,signal_kill);
     /* Our process ID and Session ID */
     pid_t pid, sid, pidTest;
 
@@ -107,25 +122,24 @@ void start()
     pid = fork();
     if (pid < 0)
     {
+        logger("Creating process error\n");
         exit(EXIT_FAILURE);
     }
     /* If we got a good PID, then
            we can exit the parent process. */
     if (pid > 0)
     {
+        logger("creating process success\n");
         exit(EXIT_SUCCESS);
     }
     /* Change the file mode mask */
     umask(0);
-    // Open logs here
-    setlogmask(LOG_UPTO (LOG_INFO));
-    openlog(daemonName, LOG_NDELAY, LOG_USER);
     /* Create a new SID for the child process */
     sid = setsid();
     if (sid < 0)
     {
         /* Log the failure */
-	logger("Creation of the daemon %s has failed\n");
+        logger("Creation of the daemon %s has failed\n");
         exit(EXIT_FAILURE);
     }
 
@@ -133,7 +147,7 @@ void start()
     if ((chdir("/")) < 0)
     {
         /* Log the failure */
-	logger("Could not change the directory to /");
+        logger("Could not change the directory to /");
         exit(EXIT_FAILURE);
     }
 
@@ -148,10 +162,13 @@ void start()
     while (1)
     {
         /* Do some task here ... */
-	logger("Daemon has woken up\n");
-	syncDir();
-            sleep(sleepTime);
+        logger("Daemon has woken up\n");
+        syncDir();
+        logger("Daemon has slept\n");
+        sleep(sleepTime);
     }
+    logger("Daemon close\n");
+    closelog();
     exit(EXIT_SUCCESS);
 }
 
@@ -239,16 +256,16 @@ void checkExist(char *subDir)
                     strcat(copySubDir, fileList[i]->d_name);
                     strcat(copySubDir, "/");
                     checkExist(copySubDir);
-		    logWithFileName("Removing directory ", destinationFilePath);
+                    logWithFileName("Removing directory ", destinationFilePath);
                     if (rmdir(destinationFilePath) != 0)
                         exitFailure("rmDIR");
                 }
-                else 
-		{
-		    logWithFileName("Removing file ", destinationFilePath);
-		    if (remove(destinationFilePath) != 0)
-			exitFailure("removeFile");
-		}
+                else
+                {
+                    logWithFileName("Removing file ", destinationFilePath);
+                    if (remove(destinationFilePath) != 0)
+                        exitFailure("removeFile");
+                }
             }
             else if (isDir(sourceFilePath) == 1)
             {
@@ -307,7 +324,7 @@ void syncDirPath(char *subDir)
             DIR *test = opendir(destinationFilePath);
             if (test == NULL)
             {
-		logWithFileName("Creating directory ", destinationFilePath);
+                logWithFileName("Creating directory ", destinationFilePath);
                 if (mkdir(destinationFilePath, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
                     exitFailure(strerror(errno));
             }
