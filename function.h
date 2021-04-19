@@ -6,7 +6,9 @@ typedef enum Bool
     true = 1
 } bool; //bool type
 
+void rmDestination(char *subDir);
 void start();
+void signal_kill();
 void init(int argc, char *args[]);
 const bool isDir(char *path);
 void exitFailure(const char *mess);
