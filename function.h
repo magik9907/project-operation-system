@@ -6,6 +6,9 @@ typedef enum Bool
     true = 1
 } bool; //bool type
 
+bool pathExist(char *p);
+void handler(int signum);
+void logger(const char *message);
 void rmDestination(char *subDir);
 void start();
 void signal_kill();

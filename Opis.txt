@@ -1,0 +1,52 @@
+wywołanie funkcji z katologu w którym znajduje się plik wykonalny.
+./function -s PATH -d PATH -R -t TIME -m SIZE
+Parmatetry
+-s PATH => przyjmuje scieżkę do katalogu źródłowego. (WYMAGANE) 
+-d PATH => przyjmuje scieżkę do katalogu docelowego. (WYMAGANE)
+-R => parametr pozwala synchronizować zawartość katalogów z katalou docelowego
+-t TIME => ustawia czas po jakim uruchamia się synchrinizacja (domyuślnie 5 min), czas podawany jest w sekundach
+-m SIZE => za SIZE przyjmuje się liczbę ppowyżej której będzie uruchamiana funkcja synchronizująca duże pliki. rozmiar plików podawany w bajtach. 
+
+Kompilacja:
+Do kompilacji wymagany jest kompilator gcc, instrukcja instalacji : https://linuxize.com/post/how-to-install-gcc-compiler-on-ubuntu-18-04/
+W terminalu, należy przejść do katalogu w którym znajdują się pliki: makefile, main.c, function.c, function.h.
+Następnie należy wykonać komendę: makefile
+po kompilacji w katalogu bieżącym znajduje się plik wykonywalny function, należy go uruchomić wg instrukcji powyżej
+
+
+void logger(const char *message) funkcja słóżąca do dodawania wiadomości podanej w parametrze do logów.
+
+void handler(int signum) funkcja wywoływana na sygnał SIGUSR1 (kill -10 PID) i uruchamiająca snchronizacje plików.
+
+void init(int argc, char *args[]) funkcja inicjalizująca program. Ustawia wszytkie parametry podane jako argumenty i ustawia ścieżki do plików.
+
+void signal_kill() handler na sygnał kill który zatrzymuje działanie demona i wstawia informacje do logów.
+
+void start() funkcja wywołująca demona synchronizacji plików.
+
+const bool isDir(char *path) sprawdza czy element docelowy jest folderem i czy istnieje
+
+const bool isFile(char *path) sprawdza czy element na śieżce jest zwykłym plikiem
+
+void exitFailure(const char *mess) funkcja kończąca działanie programu z błedem i wpisująca informacje do logów
+
+void syncDir() główna funkcja, które wywołuje synchronizacje plików
+
+bool pathExist(char *p) - funkcja sprawdzająca czy istnieje ścieżka do podanego adresu podanego jako parametr p.
+
+void logWithFileName(const char *mess, const char *file) funkcja umieszczająca informacje wraz ze ścieżką do pliku.
+
+void checkExist(char *subDir) funkcja sprawdzająca katalog docelowy i usuwająca wszystkie pliki które nie istnieją w katalogu źródłowym.
+
+void rmDestination(char *subDir) funkcja usuwająca zawartość katalogu docelowego wraz z nim
+
+void syncDirPath(char *subDir)  uruchamia synchronizacje plików z foldderu źródłowego do docelowego
+
+void syncLargeFile(size_t length, char *src, char *dest) funckja synchronizująca duże pliki (nmap), 
+
+void syncFile(char *src, char *dest, char *file) funckja synchronizująca  małe pliki
+
+void writeToFile(int fds[2], char *file) funckja zapisująca dane do pliku, połłączony za pomocą potoku z readFromFile
+
+void readFromFile(int fds[2], char *file) funkcja wczytująca dane z pliku połączony za pomocą  potoku z writeToFile()
+

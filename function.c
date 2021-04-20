@@ -21,6 +21,13 @@ bool recursivePathFlag = false; //recursive synchronise files
 size_t buffor = 256;
 const char *daemonName = "DirSync";
 
+void exitFailure(const char *mess)
+{
+    write(1, mess, strlen(mess));
+    logger(mess);
+    exit(EXIT_FAILURE);
+}
+
 void logger(const char *message)
 {
     time_t now;
@@ -36,6 +43,11 @@ void handler(int signum)
 
 void init(int argc, char *args[])
 {
+    if (argc < 5)
+    {
+        exitFailure("Not given arguments\n");
+    }
+
     // Open logs here
     setlogmask(LOG_UPTO(LOG_INFO));
     openlog(daemonName, LOG_NDELAY, LOG_USER);
@@ -209,12 +221,6 @@ const bool isFile(char *path)
     return false;
 }
 
-void exitFailure(const char *mess)
-{
-    write(1, mess, strlen(mess));
-    exit(EXIT_FAILURE);
-}
-
 void syncDir()
 {
     DIR *source;
@@ -316,6 +322,7 @@ void checkExist(char *subDir)
     free(destinationFilePath);
     free(copyPath);
 }
+
 void rmDestination(char *subDir)
 {
     DIR *dest;
@@ -374,11 +381,13 @@ void rmDestination(char *subDir)
     free(destinationFilePath);
     free(copyPath);
     logWithFileName("Removing destination path ", destinationPath);
+    free(destinationFilePath)
     if (rmdir(destinationPath) != 0)
     {
         logger("rmdir on destination file not completed");
     }
 }
+
 void syncDirPath(char *subDir)
 {
     int err = 0;
