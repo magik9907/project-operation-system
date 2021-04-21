@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "function.h"
+#include <sys/time.h>
 char *sourcePath = NULL;
 char *destinationPath = NULL;
 int sleepTime = 5 * 60;         //time in second
@@ -381,7 +382,7 @@ void rmDestination(char *subDir)
     free(destinationFilePath);
     free(copyPath);
     logWithFileName("Removing destination path ", destinationPath);
-    free(destinationFilePath)
+    free(destinationFilePath);
     if (rmdir(destinationPath) != 0)
     {
         logger("rmdir on destination file not completed");
@@ -479,6 +480,10 @@ void syncLargeFile(size_t length, char *src, char *dest)
 
 void syncFile(char *src, char *dest, char *file)
 {
+    struct timeval tv;
+    struct timezone tz;
+    struct tm *tm;
+
     strcat(dest, file);
     struct stat bufSrc, bufDest;
     if (stat(src, &bufSrc) == -1)
@@ -502,7 +507,19 @@ void syncFile(char *src, char *dest, char *file)
     size_t length = bufSrc.st_size;
     if (length >= borderFileSize)
     {
+
+        // gettimeofday(&tv, &tz);
+        // tm = localtime(&tv.tv_sec);
+        // syslog(LOG_INFO, " %d:%02d:%02d %ld \n", tm->tm_hour, tm->tm_min,
+        //        tm->tm_sec, tv.tv_usec);
+
         syncLargeFile(length, src, dest);
+
+        // gettimeofday(&tv, &tz);
+        // tm = localtime(&tv.tv_sec);
+        // syslog(LOG_INFO, "  %d:%02d:%02d %ld \n", tm->tm_hour, tm->tm_min,
+        //        tm->tm_sec, tv.tv_usec);
+
         return;
     }
     int fds[2];
@@ -513,7 +530,10 @@ void syncFile(char *src, char *dest, char *file)
         logger(strerror(errno));
         return;
     }
-
+    // gettimeofday(&tv, &tz);
+    // tm = localtime(&tv.tv_sec);
+    // syslog(LOG_INFO, " %d:%02d:%02d %ld \n", tm->tm_hour, tm->tm_min,
+    //        tm->tm_sec, tv.tv_usec);
     pid = fork();
     if (pid < 0)
     {
@@ -531,6 +551,10 @@ void syncFile(char *src, char *dest, char *file)
         readFromFile(fds, src);
         wait(pid);
     }
+    // gettimeofday(&tv, &tz);
+    // tm = localtime(&tv.tv_sec);
+    // syslog(LOG_INFO, " dd %d:%02d:%02d %ld \n", tm->tm_hour, tm->tm_min,
+    //        tm->tm_sec, tv.tv_usec);
 }
 
 void writeToFile(int fds[2], char *file)

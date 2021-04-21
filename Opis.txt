@@ -42,7 +42,7 @@ void rmDestination(char *subDir) funkcja usuwająca zawartość katalogu docelow
 
 void syncDirPath(char *subDir)  uruchamia synchronizacje plików z foldderu źródłowego do docelowego
 
-void syncLargeFile(size_t length, char *src, char *dest) funckja synchronizująca duże pliki (nmap), 
+void syncLargeFile(size_t length, char *src, char *dest) funckja synchronizująca duże pliki (mmap), 
 
 void syncFile(char *src, char *dest, char *file) funckja synchronizująca  małe pliki
 
@@ -50,3 +50,16 @@ void writeToFile(int fds[2], char *file) funckja zapisująca dane do pliku, poł
 
 void readFromFile(int fds[2], char *file) funkcja wczytująca dane z pliku połączony za pomocą  potoku z writeToFile()
 
+Porównanie wyników szybkości kopiowania plików przy użyciu dwóch różnych sposobów.
+Rozmiar testowanego pliku: 118331B
+Wyniki są poda
+Wynik czasowy dla zapisu przy użyciu mmap
+707178 - 706682 = 496
+723214 - 722619 = 595
+728099 - 727347 = 752
+Wynik zapisu przy użyciu read/write
+847997 - 838444 = 9553
+860531 - 852001 = 8530
+872030 - 862821 = 9209
+
+Wynik wskazują znaczną przewage nad szybkością kopiowania danych za pomocą funkcji mmap. Po wykonaniu trzech testów, wynik czasu dla funckji syncLargeFile w porównaniu z writeToFile/readFromFile był ponad 10x mniejszy
