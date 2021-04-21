@@ -233,9 +233,20 @@ void syncDir()
     }
     else
     {
+        if (!isDir(destinationPath))
+        {
+            if (mkdir(destinationPath, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
+            {
+                logger(strerror(errno));
+                return;
+            }
+        }
         char *p = "/";
+        logger("c");
         checkExist(p);
+        logger("c1");
         syncDirPath(p);
+        logger("c2");
     }
 }
 
@@ -261,6 +272,8 @@ void logWithFileName(const char *mess, const char *file)
 
 void checkExist(char *subDir)
 {
+    if (!isDir(destinationPath))
+        return;
     int err = 0, i;
     char *logMess;
     char *destinationFilePath = (char *)malloc(sizeof(char) * buffor);

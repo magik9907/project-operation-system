@@ -17,6 +17,7 @@ po kompilacji w katalogu bieżącym znajduje się plik wykonywalny function, nal
 void logger(const char *message) funkcja słóżąca do dodawania wiadomości podanej w parametrze do logów.
 
 void handler(int signum) funkcja wywoływana na sygnał SIGUSR1 (kill -10 PID) i uruchamiająca snchronizacje plików.
+PID można znaleźć wykoująć komendę: ps aux | grep ./function
 
 void init(int argc, char *args[]) funkcja inicjalizująca program. Ustawia wszytkie parametry podane jako argumenty i ustawia ścieżki do plików.
 
